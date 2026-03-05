@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoteWise — Music Theory</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3a;
+    --accent: #f0c040;
+    --accent2: #e07060;
+    --accent3: #60b0e0;
+    --text: #f0eee8;
+    --muted: #888899;
+    --white-key: #f5f0e8;
+    --black-key: #1a1a22;
+    --c-note: #f0c040;
+    --d-note: #e07060;
+    --e-note: #d060b0;
+    --f-note: #60b0e0;
+    --g-note: #60d090;
+    --a-note: #e09040;
+    --b-note: #a080e0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Ambient background */
+  body::before {
+    content:'';
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(240,192,64,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 80% 80%, rgba(96,176,224,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 60% 30%, rgba(224,112,96,0.04) 0%, transparent 50%);
+    pointer-events:none;
+  }
+
+  #app { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:20px; }
+
+  /* Header */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 24px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); font-style: italic; }
+  .tagline { font-size:12px; color:var(--muted); font-family:'Space Mono',monospace; letter-spacing:2px; text-transform:uppercase; }
+
+  /* Progress bar */
+  .xp-bar-wrap { display:flex; align-items:center; gap:12px; }
+  .xp-label { font-family:'Space Mono',monospace; font-size:11px; color:var(--accent); }
+  .xp-bar { width:120px; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+  .xp-fill { height:100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius:3px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+
+  /* Nav tabs */
+  .nav-tabs {
+    display:flex; gap:4px; margin-bottom:28px;
+    background: var(--surface); border-radius:12px; padding:4px;
+    border:1px solid var(--border);
+  }
+  .tab-btn {
+    flex:1; padding:10px 8px; border:none; background:transparent; color:var(--muted);
+    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500;
+    border-radius:9px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+  }
+  .tab-btn.active {
+    background: var(--surface2); color:var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .tab-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.04); }
+
+  /* Sections */
+  .section { display:none; animation: fadeIn 0.3s ease; }
+  .section.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Section header */
+  .section-title {
+    font-family:'Playfair Display',serif;
+    font-size:32px; font-weight:700; margin-bottom:6px;
+  }
+  .section-title em { color:var(--accent); font-style:italic; }
+  .section-sub { color:var(--muted); font-size:14px; margin-bottom:28px; line-height:1.6; }
+
+  /* ─── PIANO KEYBOARD ─── */
+  .piano-wrap {
+    background: var(--surface); border-radius:16px;
+    padding:24px; border:1px solid var(--border); margin-bottom:24px;
+    overflow-x:auto;
+  }
+  .piano {
+    display:flex; position:relative;
+    height:160px; width: max-content; margin:0 auto;
+    user-select:none;
+  }
+  .key {
+    position:relative; cursor:pointer;
+    border-radius:0 0 8px 8px; transition: transform 0.07s, filter 0.07s;
+    display:flex; align-items:flex-end; justify-content:center; padding-bottom:8px;
+  }
+  .key:active, .key.pressed { transform: scaleY(0.96); filter: brightness(0.85); }
+  .key.white {
+    width:52px; height:160px; background:var(--white-key);
+    border:1px solid #ccc; margin-right:1px; z-index:1;
+    font-family:'Space Mono',monospace; font-size:10px; color:#666;
+  }
+  .key.black {
+    width:34px; height:100px; background:var(--black-key);
+    position:absolute; z-index:2; top:0;
+    font-family:'Space Mono',monospace; font-size:9px; color:#777;
+  }
+  .key.highlighted { filter: brightness(1.1) saturate(1.4); }
+  .key.white.highlighted { background: var(--accent); color:#333; }
+  .key.black.highlighted { background: #b89030; color:#fff; }
+
+  /* Note label colors */
+  .key[data-note="C"].white.highlighted { background:var(--c-note); }
+  .key[data-note="D"].white.highlighted { background:var(--d-note); }
+  .key[data-note="E"].white.highlighted { background:var(--e-note); }
+  .key[data-note="F"].white.highlighted { background:var(--f-note); }
+  .key[data-note="G"].white.highlighted { background:var(--g-note); }
+  .key[data-note="A"].white.highlighted { background:var(--a-note); }
+  .key[data-note="B"].white.highlighted { background:var(--b-note); }
+
+  .key-label { font-size:10px; pointer-events:none; }
+
+  /* Note info card */
+  .note-info {
+    background:var(--surface2); border-radius:12px; padding:20px;
+    border:1px solid var(--border); margin-bottom:24px;
+    display:flex; gap:20px; align-items:center; flex-wrap:wrap;
+  }
+  .note-big {
+    font-family:'Playfair Display',serif; font-size:64px; font-weight:900;
+    color:var(--accent); line-height:1; min-width:80px;
+  }
+  .note-details { flex:1; min-width:200px; }
+  .note-details h3 { font-size:18px; margin-bottom:6px; }
+  .note-details p { color:var(--muted); font-size:13px; line-height:1.7; }
+  .note-freq { font-family:'Space Mono',monospace; font-size:11px; color:var(--accent3); margin-top:6px; }
+
+  /* Interval pills */
+  .scale-notes { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .scale-pill {
+    padding:5px 12px; border-radius:20px; font-size:12px; font-weight:500;
+    font-family:'Space Mono',monospace; border:1px solid var(--border);
+    cursor:pointer; transition: all 0.15s;
+    background: var(--surface);
+  }
+  .scale-pill:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.4); }
+  .scale-pill.active-pill { border-color: var(--accent); color: var(--accent); }
+
+  /* ─── SCALES SECTION ─── */
+  .scale-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:16px; margin-bottom:24px; }
+  .scale-card {
+    background:var(--surface); border-radius:12px; padding:20px;
+    border:1px solid var(--border); cursor:pointer; transition:all 0.2s;
+    position:relative; overflow:hidden;
+  }
+  .scale-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: var(--card-accent, var(--accent));
+  }
+  .scale-card:hover { border-color:var(--card-accent, var(--accent)); transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+  .scale-card h3 { font-size:16px; font-weight:600; margin-bottom:4px; }
+  .scale-card .mood { font-size:12px; color:var(--muted); margin-bottom:12px; }
+  .scale-card .intervals { font-family:'Space Mono',monospace; font-size:11px; color:var(--muted); }
+
+  .scale-selector { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; align-items:center; }
+  .root-btn {
+    width:40px; height:40px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); font-family:'Space Mono',monospace;
+    font-size:12px; cursor:pointer; transition:all 0.15s;
+  }
+  .root-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .root-btn.active { background:var(--accent); color:#111; border-color:var(--accent); font-weight:700; }
+
+  /* ─── EAR TRAINING ─── */
+  .ear-container { max-width:600px; margin:0 auto; text-align:center; }
+  .ear-status {
+    background:var(--surface); border-radius:16px; padding:32px;
+    border:1px solid var(--border); margin-bottom:24px;
+  }
+  .ear-emoji { font-size:48px; margin-bottom:12px; }
+  .ear-prompt { font-family:'Playfair Display',serif; font-size:22px; margin-bottom:8px; }
+  .ear-sub { color:var(--muted); font-size:14px; }
+  .play-btn {
+    display:inline-flex; align-items:center; gap:8px;
+    background: var(--accent); color:#111; border:none;
+    padding:14px 32px; border-radius:50px; font-size:15px; font-weight:600;
+    cursor:pointer; transition:all 0.2s; font-family:'DM Sans',sans-serif;
+    margin-bottom:24px;
+  }
+  .play-btn:hover { transform:scale(1.04); box-shadow:0 8px 24px rgba(240,192,64,0.3); }
+  .play-btn:active { transform:scale(0.98); }
+  .choices-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-bottom:16px; }
+  .choice-btn {
+    padding:14px 8px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); font-family:'Space Mono',monospace;
+    font-size:13px; cursor:pointer; transition:all 0.15s;
+  }
+  .choice-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); transform:translateY(-2px); }
+  .choice-btn.correct { background:#1a3a1a; border-color:#60d090; color:#60d090; }
+  .choice-btn.wrong { background:#3a1a1a; border-color:#e07060; color:#e07060; }
+  .choice-btn:disabled { cursor:not-allowed; opacity:0.7; }
+  .feedback-msg { font-size:14px; color:var(--muted); min-height:20px; margin-bottom:16px; }
+  .feedback-msg.correct-fb { color:#60d090; }
+  .feedback-msg.wrong-fb { color:#e07060; }
+  .score-display {
+    display:flex; justify-content:center; gap:24px;
+    background:var(--surface2); border-radius:10px; padding:12px 24px;
+    border:1px solid var(--border);
+  }
+  .score-item { text-align:center; }
+  .score-num { font-family:'Space Mono',monospace; font-size:24px; color:var(--accent); font-weight:700; }
+  .score-lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+  .ear-mode-tabs { display:flex; gap:8px; margin-bottom:20px; justify-content:center; }
+  .emode-btn {
+    padding:8px 18px; border-radius:20px; border:1px solid var(--border);
+    background:var(--surface); color:var(--muted); font-size:13px; cursor:pointer; transition:all 0.15s;
+  }
+  .emode-btn.active { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
+
+  /* ─── QUIZ SECTION ─── */
+  .quiz-wrap { max-width:640px; margin:0 auto; }
+  .quiz-card {
+    background:var(--surface); border-radius:16px; padding:32px;
+    border:1px solid var(--border); margin-bottom:20px; text-align:center;
+  }
+  .quiz-q { font-family:'Playfair Display',serif; font-size:22px; margin-bottom:6px; line-height:1.4; }
+  .quiz-hint { color:var(--muted); font-size:13px; margin-bottom:24px; }
+  .quiz-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .quiz-opt {
+    padding:14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface2); color:var(--text); font-size:14px;
+    cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif;
+  }
+  .quiz-opt:hover:not(:disabled) { border-color:var(--accent3); transform:translateY(-2px); }
+  .quiz-opt.correct { background:#1a3a1a; border-color:#60d090; color:#60d090; }
+  .quiz-opt.wrong { background:#3a1a1a; border-color:#e07060; color:#e07060; }
+  .quiz-progress { display:flex; gap:4px; margin-bottom:20px; }
+  .qp-dot { flex:1; height:4px; border-radius:2px; background:var(--border); transition:background 0.3s; }
+  .qp-dot.done { background:var(--accent); }
+  .qp-dot.current { background:var(--accent2); }
+  .next-btn {
+    padding:12px 28px; border-radius:50px; border:1px solid var(--accent);
+    background:transparent; color:var(--accent); font-size:14px; cursor:pointer;
+    font-family:'DM Sans',sans-serif; transition:all 0.2s; display:none;
+  }
+  .next-btn.show { display:inline-block; }
+  .next-btn:hover { background:var(--accent); color:#111; }
+
+  /* ─── THEORY REFERENCE ─── */
+  .theory-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+  .theory-card {
+    background:var(--surface); border-radius:12px; padding:20px;
+    border:1px solid var(--border);
+  }
+  .theory-card h3 { font-size:15px; font-weight:600; margin-bottom:8px; color:var(--accent); }
+  .theory-card p, .theory-card li { font-size:13px; color:var(--muted); line-height:1.8; }
+  .theory-card ul { padding-left:16px; }
+  .interval-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .interval-table th { text-align:left; padding:6px 8px; color:var(--accent); font-family:'Space Mono',monospace; border-bottom:1px solid var(--border); }
+  .interval-table td { padding:6px 8px; color:var(--muted); border-bottom:1px solid rgba(255,255,255,0.04); }
+
+  /* Notification toast */
+  .toast {
+    position:fixed; bottom:24px; right:24px; z-index:999;
+    background:var(--surface2); border:1px solid var(--accent);
+    color:var(--accent); padding:12px 20px; border-radius:10px;
+    font-size:13px; font-family:'Space Mono',monospace;
+    transform:translateY(80px); opacity:0; transition:all 0.3s;
+    pointer-events:none;
+  }
+  .toast.show { transform:translateY(0); opacity:1; }
+
+  /* Keyboard map */
+  .kb-row { display:flex; gap:5px; align-items:center; }
+  .kb-key {
+    width:44px; height:44px; border-radius:7px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'Space Mono',monospace; cursor:pointer; transition:all 0.12s;
+    border:1px solid #444; position:relative; gap:2px;
+    user-select:none;
+  }
+  .kb-key.kb-white {
+    background: var(--white-key); color:#333;
+    border-color: #bbb;
+  }
+  .kb-key.kb-black {
+    background: var(--black-key); color:#aaa;
+    border-color: #555;
+  }
+  .kb-key.kb-empty {
+    background: transparent; border-color:transparent;
+    cursor:default; pointer-events:none;
+  }
+  .kb-key:active:not(.kb-empty), .kb-key.kb-lit {
+    background: rgba(240,192,64,0.2) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    transform: scale(0.93);
+  }
+  .kb-char { font-size:15px; font-weight:700; line-height:1; }
+  .kb-note { font-size:9px; opacity:0.75; line-height:1; }
+  .kb-key.kb-white .kb-note { color:#666; }
+  .kb-key.kb-black .kb-note { color:#aaa; }
+  .kb-spacer { width:49px; }
+
+  /* Responsive */
+  @media(max-width:600px) {
+    .section-title { font-size:24px; }
+    .quiz-options { grid-template-columns:1fr; }
+    .choices-grid { grid-template-columns:repeat(2,1fr); }
+    .piano .key.white { width:38px; height:130px; }
+    .piano .key.black { width:25px; height:80px; }
+  }
+
+  .streak-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(240,192,64,0.12); border:1px solid rgba(240,192,64,0.3);
+    color:var(--accent); border-radius:20px; padding:4px 12px;
+    font-size:12px; font-family:'Space Mono',monospace;
+  }
+
+  .waveform {
+    display:flex; align-items:center; gap:3px; height:32px; margin:0 auto 16px;
+    justify-content:center;
+  }
+  .wave-bar {
+    width:4px; border-radius:2px; background:var(--accent);
+    animation: wave 1s ease-in-out infinite;
+    opacity:0;
+  }
+  .wave-bar.playing { opacity:1; }
+  @keyframes wave {
+    0%,100%{height:6px} 50%{height:28px}
+  }
+  .wave-bar:nth-child(1){animation-delay:0s}
+  .wave-bar:nth-child(2){animation-delay:0.1s}
+  .wave-bar:nth-child(3){animation-delay:0.2s}
+  .wave-bar:nth-child(4){animation-delay:0.3s}
+  .wave-bar:nth-child(5){animation-delay:0.2s}
+  .wave-bar:nth-child(6){animation-delay:0.1s}
+  .wave-bar:nth-child(7){animation-delay:0s}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="logo">Note<span>Wise</span></div>
+      <div class="tagline">Music Theory · Interactive Learning</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <div class="streak-badge">🔥 <span id="streakNum">0</span> streak</div>
+      <div class="xp-bar-wrap">
+        <span class="xp-label">XP <span id="xpNum">0</span></span>
+        <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-tabs">
+    <button class="tab-btn active" onclick="showTab('keys')">🎹 Keys</button>
+    <button class="tab-btn" onclick="showTab('scales')">🎼 Scales</button>
+    <button class="tab-btn" onclick="showTab('ear')">👂 Ear Train</button>
+    <button class="tab-btn" onclick="showTab('quiz')">🧠 Quiz</button>
+    <button class="tab-btn" onclick="showTab('theory')">📖 Theory</button>
+  </nav>
+
+  <!-- ════ KEYS SECTION ════ -->
+  <section id="tab-keys" class="section active">
+    <div class="section-title">The <em>Keyboard</em></div>
+    <div class="section-sub">Click any key to hear & learn it. <strong style="color:var(--accent)">Octave 4:</strong> white keys <kbd style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;border:1px solid var(--border)">A S D F G H J</kbd> · black keys <kbd style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;border:1px solid var(--border)">W E T Y U</kbd> &nbsp;|&nbsp; <strong style="color:var(--accent3)">Octave 5:</strong> white keys <kbd style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;border:1px solid var(--border)">K L ; ' ] Z X C</kbd> · black keys <kbd style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;border:1px solid var(--border)">2 3 5 6 7</kbd></div>
+
+    <div class="piano-wrap">
+      <div class="piano" id="piano"></div>
+    </div>
+
+    <!-- Keyboard Map -->
+    <div class="piano-wrap" style="margin-bottom:16px;">
+      <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">⌨ Computer Keyboard Mapping</div>
+      <div id="kbMap" style="display:flex;flex-direction:column;gap:6px;width:max-content;margin:0 auto;"></div>
+      <div style="margin-top:14px;display:flex;gap:20px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">
+          <div style="width:28px;height:28px;background:var(--white-key);border-radius:5px;border:1px solid #ccc;"></div> White key
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">
+          <div style="width:28px;height:28px;background:var(--black-key);border-radius:5px;border:1px solid #444;"></div> Black key (sharp/flat)
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">
+          <div style="width:28px;height:28px;background:rgba(240,192,64,0.15);border-radius:5px;border:1px solid var(--accent);"></div> Currently pressed
+        </div>
+      </div>
+    </div>
+
+    <div class="note-info" id="noteInfo">
+      <div class="note-big" id="noteBig">—</div>
+      <div class="note-details">
+        <h3 id="noteName">Click a key to begin</h3>
+        <p id="noteDesc">Each note on the piano has a unique name and sound. The pattern of 7 white notes (C D E F G A B) repeats across the keyboard.</p>
+        <div class="note-freq" id="noteFreq"></div>
+        <div class="scale-notes" id="scalePills"></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <span style="font-size:13px;color:var(--muted);margin-right:12px;">Highlight scale:</span>
+      <select id="scaleHighlight" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;" onchange="applyScaleHighlight()">
+        <option value="">None</option>
+        <option value="major">Major</option>
+        <option value="minor">Natural Minor</option>
+        <option value="pentatonic">Major Pentatonic</option>
+        <option value="blues">Blues</option>
+        <option value="chromatic">Chromatic</option>
+      </select>
+      <span style="margin-left:12px;font-size:13px;color:var(--muted);">Root:</span>
+      <select id="rootHighlight" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;margin-left:6px;" onchange="applyScaleHighlight()">
+        <option>C</option><option>C#</option><option>D</option><option>D#</option>
+        <option>E</option><option>F</option><option>F#</option><option>G</option>
+        <option>G#</option><option>A</option><option>A#</option><option>B</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- ════ SCALES SECTION ════ -->
+  <section id="tab-scales" class="section">
+    <div class="section-title">Scales & <em>Modes</em></div>
+    <div class="section-sub">A scale is a set of notes arranged by pitch. Choose a scale to see its formula, hear it, and see it on the keyboard.</div>
+
+    <div style="margin-bottom:16px;">
+      <span style="font-size:13px;color:var(--muted);margin-right:8px;">Root note:</span>
+      <div class="scale-selector" id="rootSelector"></div>
+    </div>
+
+    <div class="scale-grid" id="scaleGrid"></div>
+  </section>
+
+  <!-- ════ EAR TRAINING SECTION ════ -->
+  <section id="tab-ear" class="section">
+    <div class="section-title">Ear <em>Training</em></div>
+    <div class="section-sub">Train your ears to recognise notes and intervals. Listen, then guess!</div>
+
+    <div class="ear-mode-tabs">
+      <button class="emode-btn active" onclick="setEarMode('note')">Single Notes</button>
+      <button class="emode-btn" onclick="setEarMode('interval')">Intervals</button>
+      <button class="emode-btn" onclick="setEarMode('scale')">Scales</button>
+    </div>
+
+    <div class="ear-container">
+      <div class="ear-status">
+        <div class="ear-emoji" id="earEmoji">🎵</div>
+        <div class="waveform" id="waveform">
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+        <div class="ear-prompt" id="earPrompt">Ready to train?</div>
+        <div class="ear-sub" id="earSub">Press Play to hear a sound, then identify it</div>
+      </div>
+
+      <button class="play-btn" id="playBtn" onclick="playEarChallenge()">▶ Play Sound</button>
+
+      <div class="choices-grid" id="earChoices"></div>
+      <div class="feedback-msg" id="earFeedback"></div>
+
+      <div class="score-display">
+        <div class="score-item">
+          <div class="score-num" id="earCorrect">0</div>
+          <div class="score-lbl">Correct</div>
+        </div>
+        <div class="score-item">
+          <div class="score-num" id="earTotal">0</div>
+          <div class="score-lbl">Total</div>
+        </div>
+        <div class="score-item">
+          <div class="score-num" id="earPct">—</div>
+          <div class="score-lbl">Accuracy</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ QUIZ SECTION ════ -->
+  <section id="tab-quiz" class="section">
+    <div class="section-title">Theory <em>Quiz</em></div>
+    <div class="section-sub">Test your music theory knowledge. 10 questions, score XP!</div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-progress" id="quizProgress"></div>
+      <div class="quiz-card" id="quizCard">
+        <div class="quiz-q" id="quizQ">Press Start to begin the quiz</div>
+        <div class="quiz-hint" id="quizHint"></div>
+        <div class="quiz-options" id="quizOpts"></div>
+      </div>
+      <div style="text-align:center;margin-top:12px;display:flex;gap:12px;justify-content:center;">
+        <button class="play-btn" onclick="startQuiz()" id="startQuizBtn">Start Quiz</button>
+        <button class="next-btn" id="nextQBtn" onclick="nextQuestion()">Next →</button>
+      </div>
+      <div id="quizResult" style="display:none;text-align:center;padding:32px;background:var(--surface);border-radius:16px;border:1px solid var(--border);">
+        <div style="font-family:'Playfair Display',serif;font-size:36px;margin-bottom:8px;color:var(--accent)" id="resultScore"></div>
+        <div style="color:var(--muted);margin-bottom:20px;" id="resultMsg"></div>
+        <button class="play-btn" onclick="startQuiz()">Try Again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ THEORY SECTION ════ -->
+  <section id="tab-theory" class="section">
+    <div class="section-title">Theory <em>Reference</em></div>
+    <div class="section-sub">Quick reference cards for essential music theory concepts.</div>
+    <div class="theory-grid" id="theoryGrid"></div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  AUDIO ENGINE
+// ══════════════════════════════════════════
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getCtx() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function noteFrequency(note, octave=4) {
+  const notes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const idx = notes.indexOf(note);
+  return 440 * Math.pow(2, (idx - 9 + (octave - 4) * 12) / 12);
+}
+
+function playNote(freq, duration=0.8, type='triangle', delay=0) {
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const t = ctx.currentTime + delay;
+
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  osc.frequency.setTargetAtTime(freq, t, 0.01);
+
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.4, t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + duration + 0.1);
+}
+
+function playNoteByName(note, octave=4, duration=0.7) {
+  playNote(noteFrequency(note, octave), duration);
+}
+
+function playScale(notes, rootOctave=4) {
+  const allNotes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  let oct = rootOctave;
+  let prevIdx = -1;
+  notes.forEach((n, i) => {
+    const idx = allNotes.indexOf(n);
+    if (idx < prevIdx) oct++;
+    prevIdx = idx;
+    playNote(noteFrequency(n, oct), 0.5, 'triangle', i * 0.28);
+  });
+  // play root again at end
+  playNote(noteFrequency(notes[0], oct + (notes[notes.length-1] === notes[0] ? 0 : 0)), 0.8, 'triangle', notes.length * 0.28);
+}
+
+// ══════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════
+const NOTE_DATA = {
+  'C':  { name:'C (Do)', desc:'The most fundamental note — middle C is the center of the piano. C Major is the first scale most musicians learn.', color:'var(--c-note)' },
+  'C#': { name:'C♯ / D♭', desc:'A black key note. Sharp (♯) means one semitone up, flat (♭) means one semitone down.', color:'#c0a030' },
+  'D':  { name:'D (Re)', desc:'The second note of the major scale. D Major is popular in rock and folk music.', color:'var(--d-note)' },
+  'D#': { name:'D♯ / E♭', desc:'A black key. E♭ Major is commonly used in jazz and wind instrument music.', color:'#c05040' },
+  'E':  { name:'E (Mi)', desc:'The third note of the major scale — creates the "happy" feel of major chords.', color:'var(--e-note)' },
+  'F':  { name:'F (Fa)', desc:'The fourth note. F Major is the first scale that introduces a flat (B♭).', color:'var(--f-note)' },
+  'F#': { name:'F♯ / G♭', desc:'A black key. F♯ Minor is famously used in many emotional ballads.', color:'#3080b0' },
+  'G':  { name:'G (Sol)', desc:'The fifth note — creates the "dominant" sound. G Major is one of the easiest guitar scales.', color:'var(--g-note)' },
+  'G#': { name:'G♯ / A♭', desc:'A black key. A♭ Major appears in many Chopin compositions.', color:'#30a060' },
+  'A':  { name:'A (La)', desc:'The sixth note. Concert A (440 Hz) is the universal tuning standard for orchestras.', color:'var(--a-note)' },
+  'A#': { name:'A♯ / B♭', desc:'A black key. B♭ is the most common key for brass instruments like trumpet and tenor sax.', color:'#b06020' },
+  'B':  { name:'B (Ti/Si)', desc:'The seventh and leading note — creates strong tension that wants to resolve back to C.', color:'var(--b-note)' },
+};
+
+const SCALE_FORMULAS = {
+  major:      [0,2,4,5,7,9,11],
+  minor:      [0,2,3,5,7,8,10],
+  harmonicMinor: [0,2,3,5,7,8,11],
+  pentatonic: [0,2,4,7,9],
+  minorPentatonic: [0,3,5,7,10],
+  blues:      [0,3,5,6,7,10],
+  dorian:     [0,2,3,5,7,9,10],
+  phrygian:   [0,1,3,5,7,8,10],
+  lydian:     [0,2,4,6,7,9,11],
+  mixolydian: [0,2,4,5,7,9,10],
+  chromatic:  [0,1,2,3,4,5,6,7,8,9,10,11],
+};
+
+const SCALE_INFO = [
+  { key:'major', name:'Major Scale', mood:'Happy, bright, uplifting', color:'var(--accent)', example:'C D E F G A B' },
+  { key:'minor', name:'Natural Minor', mood:'Sad, mysterious, emotional', color:'var(--accent3)', example:'A B C D E F G' },
+  { key:'harmonicMinor', name:'Harmonic Minor', mood:'Exotic, dramatic, tense', color:'var(--accent2)', example:'A B C D E F G#' },
+  { key:'pentatonic', name:'Major Pentatonic', mood:'Bright, simple, folk-like', color:'var(--g-note)', example:'C D E G A' },
+  { key:'minorPentatonic', name:'Minor Pentatonic', mood:'Bluesy, raw, rock', color:'var(--b-note)', example:'A C D E G' },
+  { key:'blues', name:'Blues Scale', mood:'Soulful, gritty, emotional', color:'#4499cc', example:'A C D D# E G' },
+  { key:'dorian', name:'Dorian Mode', mood:'Cool, jazzy, bittersweet', color:'#88cc44', example:'D E F G A B C' },
+  { key:'mixolydian', name:'Mixolydian Mode', mood:'Rocking, dominant, bluesy', color:'#cc8844', example:'G A B C D E F' },
+  { key:'chromatic', name:'Chromatic Scale', mood:'All 12 semitones — the full palette', color:'var(--muted)', example:'C C# D D# E F F# G G# A A# B' },
+];
+
+const ALL_NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function getScaleNotes(root, formula) {
+  const rootIdx = ALL_NOTES.indexOf(root);
+  return formula.map(interval => ALL_NOTES[(rootIdx + interval) % 12]);
+}
+
+// ══════════════════════════════════════════
+//  PIANO KEYBOARD
+// ══════════════════════════════════════════
+const WHITE_NOTES = ['C','D','E','F','G','A','B'];
+const BLACK_POSITIONS = { 'C#':0, 'D#':1, 'F#':3, 'G#':4, 'A#':5 };
+// Octave 4: white = A S D F G H J   black = W E T Y U
+// Octave 5: white = Q W E R T Y U   black = 2 3 5 6 7
+const KB_MAP = {
+  // Octave 4
+  'a':{ note:'C', oct:4 }, 'w':{ note:'C#', oct:4 }, 's':{ note:'D', oct:4 },
+  'e':{ note:'D#', oct:4 }, 'd':{ note:'E', oct:4 }, 'f':{ note:'F', oct:4 },
+  't':{ note:'F#', oct:4 }, 'g':{ note:'G', oct:4 }, 'y':{ note:'G#', oct:4 },
+  'h':{ note:'A', oct:4 }, 'u':{ note:'A#', oct:4 }, 'j':{ note:'B', oct:4 },
+  // Octave 5
+  'k':{ note:'C', oct:5 }, '2':{ note:'C#', oct:5 }, 'l':{ note:'D', oct:5 },
+  '3':{ note:'D#', oct:5 }, ';':{ note:'E', oct:5 }, "'":{ note:'F', oct:5 },
+  '5':{ note:'F#', oct:5 }, ']':{ note:'G', oct:5 }, '6':{ note:'G#', oct:5 },
+  'z':{ note:'A', oct:5 }, '7':{ note:'A#', oct:5 }, 'x':{ note:'B', oct:5 },
+  'c':{ note:'C', oct:6 },
+};
+
+function buildPiano() {
+  const piano = document.getElementById('piano');
+  piano.innerHTML = '';
+  const octaves = 2;
+  let whiteX = 0;
+
+  for (let oct = 4; oct < 4 + octaves; oct++) {
+    WHITE_NOTES.forEach(note => {
+      const key = document.createElement('div');
+      key.className = 'key white';
+      key.dataset.note = note;
+      key.dataset.octave = oct;
+      const label = note === 'C' ? `C${oct}` : note;
+      key.innerHTML = `<span class="key-label">${label}</span>`;
+      key.onclick = () => triggerKey(note, oct);
+      piano.appendChild(key);
+    });
+  }
+  // Extra C at end
+  const endC = document.createElement('div');
+  endC.className = 'key white';
+  endC.dataset.note = 'C'; endC.dataset.octave = 6;
+  endC.innerHTML = `<span class="key-label">C6</span>`;
+  endC.onclick = () => triggerKey('C', 6);
+  piano.appendChild(endC);
+
+  // Black keys — position absolutely
+  const pianoRect = piano;
+  let wIdx = 0;
+  for (let oct = 4; oct < 4 + octaves; oct++) {
+    WHITE_NOTES.forEach((note, i) => {
+      const blacks = {'C':'C#','D':'D#','F':'F#','G':'G#','A':'A#'};
+      if (blacks[note]) {
+        const bNote = blacks[note];
+        const key = document.createElement('div');
+        key.className = 'key black';
+        key.dataset.note = bNote;
+        key.dataset.octave = oct;
+        // Position: between white keys
+        const globalWIdx = (oct - 4) * 7 + i;
+        key.style.left = (globalWIdx * 53 + 32) + 'px';
+        key.onclick = () => triggerKey(bNote, oct);
+        piano.appendChild(key);
+      }
+      wIdx++;
+    });
+  }
+
+  piano.style.width = (octaves * 7 * 53 + 53) + 'px';
+}
+
+function triggerKey(note, octave=4) {
+  playNoteByName(note, octave);
+  showNoteInfo(note);
+
+  // Visual press
+  const keys = document.querySelectorAll(`.key[data-note="${note}"][data-octave="${octave}"]`);
+  keys.forEach(k => {
+    k.classList.add('pressed');
+    setTimeout(() => k.classList.remove('pressed'), 200);
+  });
+}
+
+function showNoteInfo(note) {
+  const d = NOTE_DATA[note];
+  const isSharp = note.includes('#');
+  document.getElementById('noteBig').textContent = note;
+  document.getElementById('noteBig').style.color = d.color;
+  document.getElementById('noteName').textContent = d.name;
+  document.getElementById('noteDesc').textContent = d.desc;
+  document.getElementById('noteFreq').textContent = `Frequency: ${noteFrequency(note, 4).toFixed(2)} Hz (Octave 4)`;
+
+  // Show scale position if in current scale
+  const scale = document.getElementById('scaleHighlight').value;
+  const root = document.getElementById('rootHighlight').value;
+  const pills = document.getElementById('scalePills');
+  if (scale && SCALE_FORMULAS[scale]) {
+    const scaleNotes = getScaleNotes(root, SCALE_FORMULAS[scale]);
+    const pos = scaleNotes.indexOf(note);
+    if (pos >= 0) {
+      const degrees = ['Root','2nd','3rd','4th','5th','6th','7th','8th','♭3rd','♭7th','♭5th'];
+      pills.innerHTML = `<span class="scale-pill active-pill">Degree ${pos+1} in ${root} ${scale}</span>`;
+    } else {
+      pills.innerHTML = `<span class="scale-pill" style="color:var(--accent2)">Not in ${root} ${scale} scale</span>`;
+    }
+  } else {
+    // Show what scales this note is in
+    const inScales = [];
+    ['major','minor','pentatonic','blues'].forEach(s => {
+      const sn = getScaleNotes('C', SCALE_FORMULAS[s]);
+      if (sn.includes(note)) inScales.push(s);
+    });
+    pills.innerHTML = inScales.map(s => `<span class="scale-pill" onclick="highlightScaleFromPill('${s}','C')">${s}</span>`).join('');
+  }
+}
+
+function highlightScaleFromPill(scale, root) {
+  document.getElementById('scaleHighlight').value = scale;
+  document.getElementById('rootHighlight').value = root;
+  applyScaleHighlight();
+  showTab('keys');
+}
+
+function applyScaleHighlight() {
+  const scale = document.getElementById('scaleHighlight').value;
+  const root = document.getElementById('rootHighlight').value;
+  document.querySelectorAll('.key').forEach(k => k.classList.remove('highlighted'));
+  if (!scale || !SCALE_FORMULAS[scale]) return;
+  const notes = getScaleNotes(root, SCALE_FORMULAS[scale]);
+  notes.forEach(note => {
+    document.querySelectorAll(`.key[data-note="${note}"]`).forEach(k => k.classList.add('highlighted'));
+  });
+}
+
+// Keyboard input
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  const mapping = KB_MAP[e.key.toLowerCase()] || KB_MAP[e.key];
+  if (mapping) {
+    triggerKey(mapping.note, mapping.oct);
+    flashKbKey(e.key.toLowerCase() === e.key ? e.key.toLowerCase() : e.key);
+  }
+});
+
+// ══════════════════════════════════════════
+//  SCALES SECTION
+// ══════════════════════════════════════════
+let selectedRoot = 'C';
+
+function buildScaleSection() {
+  // Root selector
+  const rs = document.getElementById('rootSelector');
+  rs.innerHTML = ALL_NOTES.map(n =>
+    `<button class="root-btn ${n===selectedRoot?'active':''}" onclick="selectRoot('${n}')">${n}</button>`
+  ).join('');
+
+  // Scale grid
+  const sg = document.getElementById('scaleGrid');
+  sg.innerHTML = SCALE_INFO.map(s => `
+    <div class="scale-card" style="--card-accent:${s.color}" onclick="playScaleCard('${s.key}','${s.color}')">
+      <h3>${s.name}</h3>
+      <div class="mood">${s.mood}</div>
+      <div class="scale-notes" id="scale-pills-${s.key}"></div>
+      <div class="intervals">Formula: ${SCALE_FORMULAS[s.key].join(' – ')}</div>
+    </div>
+  `).join('');
+
+  updateScaleCards();
+}
+
+function updateScaleCards() {
+  SCALE_INFO.forEach(s => {
+    const notes = getScaleNotes(selectedRoot, SCALE_FORMULAS[s.key]);
+    const el = document.getElementById(`scale-pills-${s.key}`);
+    if (el) el.innerHTML = notes.map(n => `<span class="scale-pill">${n}</span>`).join('');
+  });
+}
+
+function selectRoot(note) {
+  selectedRoot = note;
+  document.querySelectorAll('.root-btn').forEach(b => b.classList.toggle('active', b.textContent===note));
+  updateScaleCards();
+}
+
+function playScaleCard(scaleKey, color) {
+  const notes = getScaleNotes(selectedRoot, SCALE_FORMULAS[scaleKey]);
+  playScale(notes);
+  // Highlight on keyboard
+  document.getElementById('scaleHighlight').value = scaleKey;
+  document.getElementById('rootHighlight').value = selectedRoot;
+  applyScaleHighlight();
+  showToast(`Playing ${selectedRoot} ${scaleKey}`);
+}
+
+// ══════════════════════════════════════════
+//  EAR TRAINING
+// ══════════════════════════════════════════
+let earMode = 'note';
+let earAnswer = null;
+let earCorrect = 0, earTotal = 0;
+let earAnswered = false;
+
+function setEarMode(mode) {
+  earMode = mode;
+  document.querySelectorAll('.emode-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(mode)));
+  document.getElementById('earChoices').innerHTML = '';
+  document.getElementById('earFeedback').textContent = '';
+  document.getElementById('earPrompt').textContent = 'Ready to train?';
+  earAnswer = null; earAnswered = false;
+}
+
+function playEarChallenge() {
+  if (earMode === 'note') playNoteChallenge();
+  else if (earMode === 'interval') playIntervalChallenge();
+  else playScaleChallenge();
+  earAnswered = false;
+}
+
+function playNoteChallenge() {
+  earAnswer = ALL_NOTES[Math.floor(Math.random()*12)];
+  playNoteByName(earAnswer, 4, 1.0);
+  document.getElementById('earPrompt').textContent = 'What note is this?';
+  document.getElementById('earSub').textContent = 'Listen carefully, then choose below';
+  setWave(true);
+  setTimeout(() => setWave(false), 800);
+
+  // Shuffle answer options (4 choices)
+  const opts = [earAnswer];
+  while (opts.length < 4) {
+    const n = ALL_NOTES[Math.floor(Math.random()*12)];
+    if (!opts.includes(n)) opts.push(n);
+  }
+  opts.sort(() => Math.random()-0.5);
+  renderEarChoices(opts);
+}
+
+const INTERVALS = [
+  {name:'Unison', semis:0}, {name:'Minor 2nd', semis:1}, {name:'Major 2nd', semis:2},
+  {name:'Minor 3rd', semis:3}, {name:'Major 3rd', semis:4}, {name:'Perfect 4th', semis:5},
+  {name:'Tritone', semis:6}, {name:'Perfect 5th', semis:7}, {name:'Minor 6th', semis:8},
+  {name:'Major 6th', semis:9}, {name:'Minor 7th', semis:10}, {name:'Major 7th', semis:11},
+  {name:'Octave', semis:12},
+];
+
+function playIntervalChallenge() {
+  const idx = Math.floor(Math.random() * (INTERVALS.length - 1)) + 1;
+  earAnswer = INTERVALS[idx].name;
+  const root = 48 + Math.floor(Math.random()*7);
+  const rootFreq = 440 * Math.pow(2, (root - 69) / 12);
+  const topFreq  = 440 * Math.pow(2, (root + INTERVALS[idx].semis - 69) / 12);
+  playNote(rootFreq, 0.7);
+  setTimeout(() => playNote(topFreq, 0.7), 400);
+  document.getElementById('earPrompt').textContent = 'What interval was that?';
+  setWave(true); setTimeout(() => setWave(false), 1000);
+
+  const opts = [earAnswer];
+  const pool = INTERVALS.slice(1).filter(i=>i.name!==earAnswer);
+  pool.sort(()=>Math.random()-0.5);
+  while(opts.length < 4) opts.push(pool[opts.length-1].name);
+  opts.sort(()=>Math.random()-0.5);
+  renderEarChoices(opts);
+}
+
+function playScaleChallenge() {
+  const scales = ['major','minor','pentatonic','blues','dorian'];
+  const scaleNames = {major:'Major',minor:'Natural Minor',pentatonic:'Major Pentatonic',blues:'Blues',dorian:'Dorian'};
+  const sKey = scales[Math.floor(Math.random()*scales.length)];
+  earAnswer = scaleNames[sKey];
+  const root = ALL_NOTES[Math.floor(Math.random()*12)];
+  const notes = getScaleNotes(root, SCALE_FORMULAS[sKey]);
+  playScale(notes);
+  document.getElementById('earPrompt').textContent = 'What scale was played?';
+  setWave(true); setTimeout(() => setWave(false), 2500);
+
+  const opts = [earAnswer];
+  const names = Object.values(scaleNames).filter(n=>n!==earAnswer);
+  names.sort(()=>Math.random()-0.5);
+  while(opts.length<4) opts.push(names[opts.length-1]);
+  opts.sort(()=>Math.random()-0.5);
+  renderEarChoices(opts);
+}
+
+function renderEarChoices(opts) {
+  const el = document.getElementById('earChoices');
+  el.innerHTML = opts.map(o =>
+    `<button class="choice-btn" onclick="checkEarAnswer(this,'${o.replace(/'/g,"\\'")}',this)">${o}</button>`
+  ).join('');
+}
+
+function checkEarAnswer(btn, chosen) {
+  if (earAnswered) return;
+  earAnswered = true;
+  earTotal++;
+  const correct = chosen === earAnswer;
+  if (correct) {
+    earCorrect++;
+    btn.classList.add('correct');
+    document.getElementById('earFeedback').textContent = '✓ Correct! Well done.';
+    document.getElementById('earFeedback').className = 'feedback-msg correct-fb';
+    document.getElementById('earEmoji').textContent = '🎉';
+    addXP(10); addStreak();
+  } else {
+    btn.classList.add('wrong');
+    document.getElementById('earFeedback').textContent = `✗ It was: ${earAnswer}`;
+    document.getElementById('earFeedback').className = 'feedback-msg wrong-fb';
+    document.getElementById('earEmoji').textContent = '😅';
+    resetStreak();
+    // Highlight correct
+    document.querySelectorAll('.choice-btn').forEach(b => {
+      if (b.textContent === earAnswer) b.classList.add('correct');
+    });
+  }
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+  document.getElementById('earCorrect').textContent = earCorrect;
+  document.getElementById('earTotal').textContent = earTotal;
+  const pct = Math.round(earCorrect/earTotal*100);
+  document.getElementById('earPct').textContent = pct + '%';
+}
+
+function setWave(on) {
+  document.querySelectorAll('.wave-bar').forEach(b => b.classList.toggle('playing', on));
+}
+
+// ══════════════════════════════════════════
+//  QUIZ
+// ══════════════════════════════════════════
+const QUIZ_BANK = [
+  { q:'How many notes are in the chromatic scale?', opts:['7','8','12','10'], a:2 },
+  { q:'Which note is the "root" of the C Major scale?', opts:['G','A','B','C'], a:3 },
+  { q:'How many semitones are in a Major 3rd?', opts:['2','3','4','5'], a:2 },
+  { q:'What does a sharp (♯) do to a note?', opts:['Lowers it by a semitone','Doubles its frequency','Raises it by a semitone','Lengthens it'], a:2 },
+  { q:'Which scale pattern is W W H W W W H? (W=whole, H=half)', opts:['Minor','Pentatonic','Major','Blues'], a:2 },
+  { q:'What interval is from C to G?', opts:['Major 3rd','Perfect 4th','Perfect 5th','Minor 7th'], a:2 },
+  { q:'How many notes in a Major Pentatonic scale?', opts:['4','5','6','7'], a:1 },
+  { q:'The Blues scale is based on which scale, with an added note?', opts:['Major Pentatonic','Minor Pentatonic','Dorian','Lydian'], a:1 },
+  { q:'What makes minor scales sound "sad" compared to major?', opts:['Slower tempo','Flatter 3rd degree','More notes','Higher pitch'], a:1 },
+  { q:'Concert A is tuned to what frequency?', opts:['432 Hz','440 Hz','450 Hz','420 Hz'], a:1 },
+  { q:'Which mode has the same notes as Natural Minor?', opts:['Dorian','Phrygian','Aeolian','Lydian'], a:2 },
+  { q:'The interval of an octave spans how many semitones?', opts:['7','8','10','12'], a:3 },
+  { q:'What is the enharmonic equivalent of F♯?', opts:['E♭','G♭','G♯','A♭'], a:1 },
+  { q:'In the key of C Major, what is the 5th scale degree?', opts:['E','F','G','A'], a:2 },
+  { q:'Which scale is most associated with rock and blues guitar solos?', opts:['Major','Harmonic Minor','Minor Pentatonic','Lydian'], a:2 },
+];
+
+let quizQs = [], quizIdx = 0, quizScore = 0, quizAnswered = false;
+
+function startQuiz() {
+  quizQs = [...QUIZ_BANK].sort(()=>Math.random()-0.5).slice(0,10);
+  quizIdx = 0; quizScore = 0; quizAnswered = false;
+  document.getElementById('quizResult').style.display = 'none';
+  document.getElementById('quizCard').style.display = 'block';
+  document.getElementById('startQuizBtn').style.display = 'none';
+  buildProgressDots();
+  renderQuestion();
+}
+
+function buildProgressDots() {
+  const el = document.getElementById('quizProgress');
+  el.innerHTML = quizQs.map((_,i)=>`<div class="qp-dot ${i===0?'current':''}"></div>`).join('');
+}
+
+function renderQuestion() {
+  const q = quizQs[quizIdx];
+  document.getElementById('quizQ').textContent = q.q;
+  document.getElementById('quizHint').textContent = `Question ${quizIdx+1} of ${quizQs.length}`;
+  const opts = document.getElementById('quizOpts');
+  opts.innerHTML = q.opts.map((o,i)=>
+    `<button class="quiz-opt" onclick="checkQuiz(this,${i})">${o}</button>`
+  ).join('');
+  document.getElementById('nextQBtn').classList.remove('show');
+  quizAnswered = false;
+}
+
+function checkQuiz(btn, chosen) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const q = quizQs[quizIdx];
+  const dots = document.querySelectorAll('.qp-dot');
+  dots[quizIdx].classList.remove('current');
+
+  if (chosen === q.a) {
+    btn.classList.add('correct');
+    quizScore++;
+    addXP(15);
+    dots[quizIdx].style.background = 'var(--g-note)';
+  } else {
+    btn.classList.add('wrong');
+    dots[quizIdx].style.background = 'var(--accent2)';
+    document.querySelectorAll('.quiz-opt')[q.a].classList.add('correct');
+  }
+  document.querySelectorAll('.quiz-opt').forEach(b=>b.disabled=true);
+  document.getElementById('nextQBtn').classList.add('show');
+  if (quizIdx+1 < quizQs.length) dots[quizIdx+1].classList.add('current');
+}
+
+function nextQuestion() {
+  quizIdx++;
+  if (quizIdx >= quizQs.length) {
+    showQuizResult();
+  } else {
+    renderQuestion();
+    document.getElementById('nextQBtn').classList.remove('show');
+  }
+}
+
+function showQuizResult() {
+  document.getElementById('quizCard').style.display = 'none';
+  document.getElementById('quizResult').style.display = 'block';
+  document.getElementById('startQuizBtn').style.display = 'inline-flex';
+  const pct = Math.round(quizScore/quizQs.length*100);
+  document.getElementById('resultScore').textContent = `${quizScore} / ${quizQs.length} — ${pct}%`;
+  let msg = pct>=80 ? '🎉 Excellent! You really know your theory!' : pct>=60 ? '👍 Good effort! Keep practicing.' : '📚 Keep studying — you\'ll get there!';
+  document.getElementById('resultMsg').textContent = msg;
+}
+
+// ══════════════════════════════════════════
+//  THEORY REFERENCE
+// ══════════════════════════════════════════
+const THEORY_CARDS = [
+  { title:'The Musical Alphabet', html:`<p>Western music uses 7 natural notes: <strong style="color:var(--accent)">C D E F G A B</strong>, then repeats. Between some notes are sharps/flats (black keys). The distance between any two adjacent notes is a <em>semitone</em>.</p>` },
+  { title:'Tones & Semitones', html:`<p>A <strong>semitone</strong> = 1 piano key (the smallest step). A <strong>tone</strong> (whole step) = 2 semitones.<br><br>Major scale formula: <span style="font-family:'Space Mono',monospace;color:var(--accent3)">T T S T T T S</span></p>` },
+  { title:'Major Scale', html:`<p>The Major scale has 7 notes with the formula: Tone Tone Semitone Tone Tone Tone Semitone. It sounds <em>happy and bright</em>. The C Major scale uses only white keys: C D E F G A B.</p>` },
+  { title:'Minor Scale', html:`<p>The Natural Minor scale formula: T S T T S T T. It sounds <em>sad or mysterious</em>. A Minor uses all white keys: A B C D E F G — it shares all notes with C Major!</p>` },
+  { title:'Intervals', html:`
+    <table class="interval-table">
+      <tr><th>Name</th><th>Semitones</th><th>Example</th></tr>
+      <tr><td>Minor 2nd</td><td>1</td><td>C → C♯</td></tr>
+      <tr><td>Major 2nd</td><td>2</td><td>C → D</td></tr>
+      <tr><td>Minor 3rd</td><td>3</td><td>C → E♭</td></tr>
+      <tr><td>Major 3rd</td><td>4</td><td>C → E</td></tr>
+      <tr><td>Perfect 4th</td><td>5</td><td>C → F</td></tr>
+      <tr><td>Perfect 5th</td><td>7</td><td>C → G</td></tr>
+      <tr><td>Octave</td><td>12</td><td>C → C</td></tr>
+    </table>` },
+  { title:'Pentatonic Scale', html:`<p>Only 5 notes — the simplest and most universal scale. <strong>Major pentatonic:</strong> degrees 1 2 3 5 6 of major scale. <strong>Minor pentatonic:</strong> 1 ♭3 4 5 ♭7. Used in folk, rock, blues, and Asian music.</p>` },
+  { title:'The Blues Scale', html:`<p>Minor pentatonic + the "blue note" (♭5 / tritone). This extra note creates the characteristic tension in blues, jazz, and rock. Formula: 1 ♭3 4 ♭5 5 ♭7</p>` },
+  { title:'Modes', html:`<ul>
+    <li><strong>Ionian</strong> — same as Major (happy)</li>
+    <li><strong>Dorian</strong> — minor + raised 6th (jazzy)</li>
+    <li><strong>Phrygian</strong> — minor + ♭2 (Spanish/dark)</li>
+    <li><strong>Lydian</strong> — major + ♯4 (dreamy)</li>
+    <li><strong>Mixolydian</strong> — major + ♭7 (bluesy)</li>
+    <li><strong>Aeolian</strong> — same as Natural Minor</li>
+    <li><strong>Locrian</strong> — ♭2, ♭5 (unstable, rare)</li>
+  </ul>` },
+  { title:'Circle of Fifths', html:`<p>A diagram showing all 12 keys arranged by perfect fifths. Moving clockwise adds sharps; counter-clockwise adds flats. Adjacent keys share 6 of 7 notes — that's why they sound harmonically related!</p><p style="margin-top:8px;color:var(--accent)">C → G → D → A → E → B → F♯ → D♭ → A♭ → E♭ → B♭ → F → C</p>` },
+  { title:'Relative Major/Minor', html:`<p>Every major key has a <strong>relative minor</strong> that shares the same notes. Find it by going to the 6th degree of the major scale.<br><br>C Major ↔ A Minor<br>G Major ↔ E Minor<br>F Major ↔ D Minor</p>` },
+  { title:'Key Signatures', html:`<ul>
+    <li>C Major — 0 sharps/flats</li>
+    <li>G Major — 1 sharp (F♯)</li>
+    <li>D Major — 2 sharps (F♯ C♯)</li>
+    <li>F Major — 1 flat (B♭)</li>
+    <li>B♭ Major — 2 flats (B♭ E♭)</li>
+  </ul>` },
+  { title:'Practice Tips', html:`<ul>
+    <li>Practice scales <em>slowly</em> before speeding up</li>
+    <li>Sing notes aloud to train your ear</li>
+    <li>Use the ear training section daily</li>
+    <li>Learn songs in different keys</li>
+    <li>Understand <em>why</em> before memorising <em>what</em></li>
+  </ul>` },
+];
+
+function buildTheory() {
+  document.getElementById('theoryGrid').innerHTML = THEORY_CARDS.map(c=>`
+    <div class="theory-card">
+      <h3>${c.title}</h3>
+      ${c.html}
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════
+//  XP / GAMIFICATION
+// ══════════════════════════════════════════
+let xp = 0, streak = 0;
+
+function addXP(n) {
+  xp += n;
+  document.getElementById('xpNum').textContent = xp;
+  document.getElementById('xpFill').style.width = Math.min((xp % 200) / 2, 100) + '%';
+  showToast(`+${n} XP!`);
+}
+
+function addStreak() {
+  streak++;
+  document.getElementById('streakNum').textContent = streak;
+  if (streak > 0 && streak % 5 === 0) showToast(`🔥 ${streak} streak! Amazing!`);
+}
+
+function resetStreak() { streak = 0; document.getElementById('streakNum').textContent = 0; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ══════════════════════════════════════════
+//  TAB NAVIGATION
+// ══════════════════════════════════════════
+function showTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  const tabs = ['keys','scales','ear','quiz','theory'];
+  document.querySelectorAll('.tab-btn')[tabs.indexOf(tab)].classList.add('active');
+}
+
+// ══════════════════════════════════════════
+//  KEYBOARD MAP VISUAL  (2 octaves)
+// ══════════════════════════════════════════
+// Octave 4:  whites = A S D F G H J    blacks = W E _ T Y U
+// Octave 5:  whites = K L ; ' ] Z X C  blacks = 2 3 _ 5 6 7
+
+const OCT4 = {
+  label: '── OCTAVE 4  (lower) ──',
+  whites: [
+    { char:'A', note:'C4',  kbkey:'a' },
+    { char:'S', note:'D4',  kbkey:'s' },
+    { char:'D', note:'E4',  kbkey:'d' },
+    { char:'F', note:'F4',  kbkey:'f' },
+    { char:'G', note:'G4',  kbkey:'g' },
+    { char:'H', note:'A4',  kbkey:'h' },
+    { char:'J', note:'B4',  kbkey:'j' },
+  ],
+  blacks: [
+    { char:'W', note:'C#4', kbkey:'w', offset:0 },
+    { char:'E', note:'D#4', kbkey:'e', offset:1 },
+    { char:'T', note:'F#4', kbkey:'t', offset:3 },
+    { char:'Y', note:'G#4', kbkey:'y', offset:4 },
+    { char:'U', note:'A#4', kbkey:'u', offset:5 },
+  ],
+};
+
+const OCT5 = {
+  label: '── OCTAVE 5  (higher) ──',
+  whites: [
+    { char:'K',  note:'C5',  kbkey:'k'  },
+    { char:'L',  note:'D5',  kbkey:'l'  },
+    { char:';',  note:'E5',  kbkey:';'  },
+    { char:"'",  note:'F5',  kbkey:"'"  },
+    { char:']',  note:'G5',  kbkey:']'  },
+    { char:'Z',  note:'A5',  kbkey:'z'  },
+    { char:'X',  note:'B5',  kbkey:'x'  },
+    { char:'C',  note:'C6',  kbkey:'c'  },
+  ],
+  blacks: [
+    { char:'2', note:'C#5', kbkey:'2', offset:0 },
+    { char:'3', note:'D#5', kbkey:'3', offset:1 },
+    { char:'5', note:'F#5', kbkey:'5', offset:3 },
+    { char:'6', note:'G#5', kbkey:'6', offset:4 },
+    { char:'7', note:'A#5', kbkey:'7', offset:5 },
+  ],
+};
+
+function buildKbMap() {
+  const wrap = document.getElementById('kbMap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  const KW = 44, KG = 5;
+
+  function makeOctaveBlock(oct) {
+    const block = document.createElement('div');
+    block.style.cssText = 'display:inline-block;vertical-align:top;';
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText = "font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-align:center;margin-bottom:8px;letter-spacing:1px;";
+    lbl.textContent = oct.label;
+    block.appendChild(lbl);
+
+    const inner = document.createElement('div');
+    inner.style.cssText = 'position:relative;';
+
+    // Black keys row
+    const blackRow = document.createElement('div');
+    const totalW = oct.whites.length * (KW + KG) - KG;
+    blackRow.style.cssText = `position:relative;height:52px;width:${totalW}px;margin-bottom:4px;`;
+
+    oct.blacks.forEach(k => {
+      const el = document.createElement('div');
+      el.className = 'kb-key kb-black';
+      el.dataset.kbchar = k.kbkey;
+      const left = k.offset * (KW + KG) + Math.round(KW * 0.57);
+      el.style.cssText = `position:absolute;left:${left}px;top:0;width:38px;height:48px;`;
+      el.innerHTML = `<span class="kb-char" style="font-size:13px">${k.char}</span><span class="kb-note">${k.note}</span>`;
+      el.addEventListener('mousedown', () => {
+        const m = KB_MAP[k.kbkey];
+        if (m) { triggerKey(m.note, m.oct); flashKbKey(k.kbkey); }
+      });
+      blackRow.appendChild(el);
+    });
+
+    // White keys row
+    const whiteRow = document.createElement('div');
+    whiteRow.style.cssText = 'display:flex;gap:5px;';
+
+    oct.whites.forEach(k => {
+      const el = document.createElement('div');
+      el.className = 'kb-key kb-white';
+      el.dataset.kbchar = k.kbkey;
+      el.innerHTML = `<span class="kb-char">${k.char}</span><span class="kb-note">${k.note}</span>`;
+      el.addEventListener('mousedown', () => {
+        const m = KB_MAP[k.kbkey];
+        if (m) { triggerKey(m.note, m.oct); flashKbKey(k.kbkey); }
+      });
+      whiteRow.appendChild(el);
+    });
+
+    inner.appendChild(blackRow);
+    inner.appendChild(whiteRow);
+    block.appendChild(inner);
+    return block;
+  }
+
+  const container = document.createElement('div');
+  container.style.cssText = 'display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;';
+  container.appendChild(makeOctaveBlock(OCT4));
+
+  const div = document.createElement('div');
+  div.style.cssText = 'width:2px;background:var(--border);border-radius:2px;align-self:stretch;margin-top:22px;';
+  container.appendChild(div);
+
+  container.appendChild(makeOctaveBlock(OCT5));
+  wrap.appendChild(container);
+}
+
+function flashKbKey(char) {
+  document.querySelectorAll(`.kb-key[data-kbchar="${char}"]`).forEach(el => {
+    el.classList.add('kb-lit');
+    setTimeout(() => el.classList.remove('kb-lit'), 200);
+  });
+}
+
+// Flash visual map on real key presses
+document.addEventListener('keydown', e => {
+  flashKbKey(e.key.toLowerCase() === e.key ? e.key : e.key.toLowerCase());
+});
+
+
+buildPiano();
+buildKbMap();
+buildScaleSection();
+buildTheory();
+
+// Init ear choices
+renderEarChoices(['C','D','E','F','G','A']);
+
+// Init quiz UI
+buildProgressDots.toString(); // just ensure it's available
+document.getElementById('quizProgress').innerHTML = '';
+</script>
+</body>
+</html>
